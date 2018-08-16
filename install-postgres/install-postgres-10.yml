@@ -1,0 +1,87 @@
+- name: configure postgres installation
+  hosts: vagrant2 
+  become: True
+  vars:
+    postgres_version: 10.5 
+    postgres_download_folder: /pg/download/
+    postgres_install_folder: /pg/10.5/ 
+    postgres_download_url: http://ftp.postgresql.org/pub/source/v10.5/postgresql-10.5.tar.gz
+     
+  tasks:
+    - name: install apt packages  
+      apt: 
+        pkg: "{{ item }}" 
+        update_cache: yes
+        cache_valid_time: 3600 
+      with_items:
+        - libreadline-dev
+        - zlib1g-dev
+        - build-essential
+        - libpq-dev
+        - libpython-dev
+        - libssl-dev
+
+    - name: create /pg/download folder
+      file: 
+        path: "{{ postgres_download_folder }}" 
+        state: directory
+        owner: root
+        group: root
+        mode: 0755  
+        recurse: yes
+
+    - name: create Postgres installation folder
+      file: 
+        path: "{{ postgres_install_folder }}" 
+        state: directory
+        owner: root
+        group: root
+        mode: 0755  
+        recurse: yes
+
+    - name: download Postgres source code
+      get_url: 
+        url: "{{ postgres_download_url }}" 
+        dest: "{{ postgres_download_folder }}postgresql-{{ postgres_version }}.tar.gz" 
+      register: postgres_tarball 
+
+    - name: unpack Postgres tarball
+      unarchive:
+        copy: no
+        dest: "{{ postgres_download_folder }}"
+        src: "{{ postgres_tarball.dest }}"
+      when: postgres_tarball is changed
+      register: postgres_tarball_unpack
+
+    - name: configure Postgres 
+      command: './configure --prefix="{{ postgres_install_folder }}"'
+      args:
+        chdir: "{{ postgres_download_folder }}postgresql-{{ postgres_version }}"
+      when: postgres_tarball_unpack is changed
+      register: postgres_configure
+
+    - name: make 
+      make:  
+        chdir: "{{ postgres_download_folder}}postgresql-{{ postgres_version }}"
+      when: postgres_configure is changed
+ 
+    - name: make install
+      make: 
+        chdir: "{{ postgres_download_folder}}postgresql-{{ postgres_version }}"
+        target: install
+      become: yes
+      when: postgres_configure is changed
+
+    - name: make contrib packages 
+      make: 
+        chdir: "{{ postgres_download_folder}}postgresql-{{ postgres_version }}/contrib"
+      when: postgres_configure is changed
+
+    - name: install contrib packages
+      make: 
+        chdir: "{{ postgres_download_folder}}postgresql-{{ postgres_version }}/contrib"
+        target: install
+      become: yes
+      when: postgres_configure is changed
+
+

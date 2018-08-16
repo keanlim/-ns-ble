@@ -1,0 +1,8 @@
+[vagrant]
+vagrant1 ansible_host=127.0.0.1 ansible_port=2222 
+vagrant2 ansible_host=127.0.0.1 ansible_port=2200 
+vagrant3 ansible_host=127.0.0.1 ansible_port=2201 
+
+[dm]
+dm04 ansible_host=dm04.office.jib ansible_port=22 ansible_user=root ansible_private_key_file=/var/root/ansible_playbook/install-postgres/no_pass.pem
+
